@@ -4,7 +4,7 @@
  * Created Date: 25.02.2022 14:12:17
  * Author: 3urobeat
  *
- * Last Modified: 04.06.2023 18:01:06
+ * Last Modified: 04.06.2023 19:04:02
  * Modified By: 3urobeat
  *
  * Copyright (c) 2022 3urobeat <https://github.com/HerrEurobeat>
@@ -21,7 +21,6 @@ let logger    = require("output-logger");
 
 const PluginSystem  = require("../../src/pluginSystem/pluginSystem.js"); // eslint-disable-line
 const pluginPackage = require("./package.json"); // eslint-disable-line
-const pluginConfig  = require("./config.json"); // eslint-disable-line
 
 
 /**
@@ -49,17 +48,17 @@ module.exports = Plugin;
 /**
  * This function will be called by the plugin loader after updating but before logging in. Initialize your plugin here.
  */
-Plugin.prototype.load = function() {
+Plugin.prototype.load = async function() {
+    this.pluginConfig = await this.sys.loadPluginConfig(pluginPackage.name);
+
     this.app = express();
 
     // Generate requestKey if it is not created already
-    if (!pluginConfig.requestKey) {
-        pluginConfig.requestKey = Math.random().toString(36).slice(-10); // Credit: https://stackoverflow.com/a/9719815/12934162
+    if (!this.pluginConfig.requestKey) {
+        this.pluginConfig.requestKey = Math.random().toString(36).slice(-10); // Credit: https://stackoverflow.com/a/9719815/12934162
         logger("info", "Webserver plugin: Generated a new secret key for comment requests via url. You can find the key in the 'package.json' file of this plugin.");
 
-        fs.writeFile("pluginConfig.json", JSON.stringify(pluginConfig, null, 4), (err) => { // TODO: Replace with writeToFs function when supported by DataManger
-            if (err) logger("error", "Webserver plugin: Error writing created requestKey to package.json: " + err);
-        });
+        this.sys.writePluginConfig(pluginPackage.name, this.pluginConfig);
     }
 
 };
@@ -119,7 +118,7 @@ Plugin.prototype.ready = function() {
             return res.status(400).send("You have to provide a profile id where I should comment.</br>Usage: /comment?n=123&id=123&key=123 to request n comments on id profile with your secret key.</br>If you forgot your secret key you can see it in your 'data.json' file in the 'src' folder.");
         }
 
-        if (!req.query.key || req.query.key != pluginConfig.requestKey) {
+        if (!req.query.key || req.query.key != this.pluginConfig.requestKey) {
             logger("warn", `Webserver plugin: Request by ${ip} denied. Reason: Invalid secret key.`); // I think it is fair to output this message with a warn type
             return res.status(403).send("Your secret key is not defined or invalid. Request denied.</br>If you forgot your secret key you can see it in your 'data.json' file in the 'src' folder.</br>Usage: /comment?n=123&id=123&key=123 to request n comments on id profile with your secret key.");
         }
