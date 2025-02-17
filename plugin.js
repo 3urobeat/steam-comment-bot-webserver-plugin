@@ -4,10 +4,10 @@
  * Created Date: 25.02.2022 14:12:17
  * Author: 3urobeat
  *
- * Last Modified: 2024-03-01 22:11:25
+ * Last Modified: 2025-02-17 19:46:34
  * Modified By: 3urobeat
  *
- * Copyright (c) 2022 - 2024 3urobeat <https://github.com/3urobeat>
+ * Copyright (c) 2022 - 2025 3urobeat <https://github.com/3urobeat>
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
@@ -98,7 +98,7 @@ Plugin.prototype.ready = function() {
         res.status(200).send(`<title>Comment Bot Web Request</title><b>${this.data.datafile.mestr}'s Comment Bot | Comment Web Request</b></br>Please use /comment?n=123&id=123&key=123 to request n comments on id profile with your secret key.</br>If you forgot your secret key you can see it in your 'data.json' file in the 'src' folder.</br></br>Visit /output to see the complete output.txt in your browser!</b></br></br>https://github.com/3urobeat/steam-comment-service-bot`);
     });
 
-    this.app.get("/comment", (req, res) => {
+    this.app.get("/comment", async (req, res) => {
         let ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress).replace("::ffff:", ""); // Get IP of visitor
 
         // Get provided parameters
@@ -127,7 +127,11 @@ Plugin.prototype.ready = function() {
 
 
         // Run the comment command
-        this.commandHandler.runCommand("comment", [ amount, receivingID ], respondModule, this, { res: res, userID: requestingID });
+        let runResponse = await this.commandHandler.runCommand("comment", [ amount, receivingID ], respondModule, this, { res: res, userID: requestingID });
+
+        if (!runResponse.success) {
+            return res.status(500).send(runResponse.message || runResponse.reason);
+        }
     });
 
     this.app.get("/output", (req, res) => { // Show output
